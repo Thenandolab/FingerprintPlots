@@ -1,48 +1,119 @@
-# Copyright (c) 2020 brainlife.io
-#
-# This file is a template for a python-based brainlife.io App
-# brainlife stages this git repo, writes `config.json` and execute this script.
-# this script reads the `config.json` and execute pynets container through singularity
-#
-# you can run this script(main) without any parameter to test how this App will run outside brainlife
-# you will need to copy config.json.brainlife-sample to config.json before running `main` as `main`
-# will read all parameters from config.json
-#
-# Author: Franco Pestilli
-# The University of Texas at Austin
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon May 23 11:43:07 2022
 
-# set up environment
+@author: dan
+"""
+
+import os
+import sys
+
+sys.path.append('wma_pyTools')
+startDir=os.getcwd()
+#some how set a path to wma pyTools repo directory
+#wmaToolsDir='wma_pyTools'
+#wmaToolsDir='..'
+#os.chdir(wmaToolsDir)
+print(os.getcwd())
+print(os.listdir())
+import wmaPyTools.roiTools
+import wmaPyTools.analysisTools
+import wmaPyTools.segmentationTools
+import wmaPyTools.streamlineTools
+import wmaPyTools.visTools
+
+#os.chdir(startDir)
+
+import os
 import json
+import numpy as np
 import nibabel as nib
-import dipy
 
-from dipy.align.reslice import reslice
-from dipy.data import get_fnames
 
 # load inputs from config.json
 with open('config.json') as config_json:
 	config = json.load(config_json)
 
-# Load into variables predefined code inputs
-data_file = str(config['t1'])
- 
-# set the output resolution
-out_res = [ int(v) for v in config['outres'].split(" ")]
+outDir='output'
+if not os.path.exists(outDir):
+    os.makedirs(outDir)
+if not os.path.exists(os.path.join(outDir,'images')):
+    os.makedirs(os.path.join(outDir,'images'))
+#set to freesurfer output path for this subject
+fsPath=config['freesurfer']
+#you may need to convert the .mgz files to .nii.gz using the mr_convert command
+#also, you may need to rename the subsequent aparcDk atlas file to it's standard name:
+atlasName='aparc.a2009s+aseg'
+#if a fsPath has been entered, load it
+if not np.logical_or(fsPath=='',fsPath==None)
+    try:
+        inputAtlas=nib.load(os.path.join(fsPath,'mri/'+atlasName+'.nii.gz'))
+    except:
+        #can nibael handle mgz?
+        inputAtlas=nib.load(os.path.join(fsPath,'mri/'+atlasName+'.mgz'))
+    inputAtlas=wmaPyTools.roiTools.inflateAtlasIntoWMandBG(inputAtlas, 1)
+else:
+    #set inputAtlas to none
+    inputAtlas=None
+#also load the lookup table for freesurfer
+#conveniently stolen from WiMSE: https://github.com/DanNBullock/WiMSE
+lookupTable=pd.read_csv('FreesurferLookup.csv')
+#do the same for the reference T1
 
-# we load the input T1w that we would like to resample
-img = nib.load(data_file)
+if not np.logical_or(fsPath=='',fsPath==None)
+    try:
+        inputAtlas=nib.load(os.path.join(fsPath,'mri/'+atlasName+'.nii.gz'))
+    except:
+        #can nibael handle mgz?
+        inputAtlas=nib.load(os.path.join(fsPath,'mri/'+atlasName+'.mgz'))
+    inputAtlas=wmaPyTools.roiTools.inflateAtlasIntoWMandBG(inputAtlas, 1)
+else:
+    #set inputAtlas to none
+    inputAtlas=None
 
-# we get the data from the nifti file
-input_data   = img.get_data()
-input_affine = img.affine
-input_zooms  = img.header.get_zooms()[:3]
+refAnatT1=config['anat']
+if not np.logical_or(refAnatT1=='',refAnatT1==None)
+    refAnatT1=nib.load(refAnatT1)
+    #robust load; sometimes hi res T1s have very strange affines
+    refAnatT1 = nib.nifti1.Nifti1Image(refAnatT1.get_data(), np.round(refAnatT1.affine,4), refAnatT1.header)
+else:
+    #set refAnatT1 to none
+    refAnatT1=None
 
-# resample the data
-out_data, out_affine = reslice(input_data, input_affine, input_zooms, out_res)
+#set to path to target whole brain tractogram
+#smaller = faster
+tractogramPath=config['tractogram']
+tractogramLoad=nib.streamlines.load(tractogramPath)
+#is this creating inf values?
+#streamlines=wmaPyTools.streamlineTools.orientAllStreamlines(tractogramLoad.streamlines)
+streamlines=tractogramLoad.streamlines
 
-# create the new NIFTI file for the output
-out_img = nib.Nifti1Image(out_data, out_affine)
+#load the wmc
+classification=matWMC2dict(config['wmc'])
+#reminder
+#wmc_Dict['names']=tractNames
+#wmc_Dict['index']=indices.tolist()
 
-# save the output file (with the new resolution) to disk
-nib.save(out_img, 'out_dir/t1.nii.gz')
+outJsonDict={'images':[]}
+for tractIterator,iTractName in enumerate(classification['names']):
+    #get the current name
+    currentName=iTractName
+    #get the bool vec of the streamline indexes
+    currentIndexesBool=classification['index']==tractIterator
+    #make an output directory for this tract
+    currFigOutDir=os.path.join(outDir,'images',currentName)
+    if not os.path.exists(currFigOutDir):
+        os.makedirs(currFigOutDir)
+    #create the requested visualizations
+    wmaPyTools.visTools.multiPlotsForTract(streamlines[currentIndexesBool],atlas=inputAtlas,atlasLookupTable=lookupTable,refAnatT1=refAnatT1,outdir=currFigOutDir,tractName=currentName,makeGifs=config['gifFlag'],makeTiles=config['tileFlag'],makeFingerprints=config['fingerprintFlag'],makeSpagetti=config['spagettiFlag'])
+    #generate a json info dict for the requested images
+    currentTractDict=wmaPyTools.visTools.jsonFor_multiPlotsForTract(tractName=currentName,makeGifs=config['gifFlag'],makeTiles=config['tileFlag'],makeFingerprints=config['fingerprintFlag'],makeSpagetti=config['spagettiFlag'])
+    #append it to the dictionary
+    outJsonDict['images']=outJsonDict['images']+currentTractDict['images']
+    
+with open("images.json", "w") as outfile:
+    #dump or dumps?  I have no idea
+    json.dump(dictionary, outfile)
 
+print ('figure generation complete')
