@@ -9,7 +9,7 @@ Created on Mon May 23 11:43:07 2022
 import os
 import sys
 
-sys.path.append('wma_pyTools')
+sys.path.append('wma_pyTools/')
 startDir=os.getcwd()
 #some how set a path to wma pyTools repo directory
 #wmaToolsDir='wma_pyTools'
@@ -29,6 +29,7 @@ import os
 import json
 import numpy as np
 import nibabel as nib
+import pandas as pd
 
 
 # load inputs from config.json
@@ -46,7 +47,7 @@ fsPath=config['freesurfer']
 #also, you may need to rename the subsequent aparcDk atlas file to it's standard name:
 atlasName='aparc.a2009s+aseg'
 #if a fsPath has been entered, load it
-if not np.logical_or(fsPath=='',fsPath==None)
+if not np.logical_or(fsPath=='',fsPath==None):
     try:
         inputAtlas=nib.load(os.path.join(fsPath,'mri/'+atlasName+'.nii.gz'))
     except:
@@ -61,19 +62,8 @@ else:
 lookupTable=pd.read_csv('FreesurferLookup.csv')
 #do the same for the reference T1
 
-if not np.logical_or(fsPath=='',fsPath==None)
-    try:
-        inputAtlas=nib.load(os.path.join(fsPath,'mri/'+atlasName+'.nii.gz'))
-    except:
-        #can nibael handle mgz?
-        inputAtlas=nib.load(os.path.join(fsPath,'mri/'+atlasName+'.mgz'))
-    inputAtlas=wmaPyTools.roiTools.inflateAtlasIntoWMandBG(inputAtlas, 1)
-else:
-    #set inputAtlas to none
-    inputAtlas=None
-
 refAnatT1=config['anat']
-if not np.logical_or(refAnatT1=='',refAnatT1==None)
+if not np.logical_or(refAnatT1=='',refAnatT1==None):
     refAnatT1=nib.load(refAnatT1)
     #robust load; sometimes hi res T1s have very strange affines
     refAnatT1 = nib.nifti1.Nifti1Image(refAnatT1.get_data(), np.round(refAnatT1.affine,4), refAnatT1.header)
@@ -90,17 +80,19 @@ tractogramLoad=nib.streamlines.load(tractogramPath)
 streamlines=tractogramLoad.streamlines
 
 #load the wmc
-classification=matWMC2dict(config['wmc'])
+classification=wmaPyTools.streamlineTools.matWMC2dict(config['wmc'])
 #reminder
 #wmc_Dict['names']=tractNames
 #wmc_Dict['index']=indices.tolist()
 
 outJsonDict={'images':[]}
 for tractIterator,iTractName in enumerate(classification['names']):
+    
+    print ('plotting figures for ' + iTractName)
     #get the current name
     currentName=iTractName
     #get the bool vec of the streamline indexes
-    currentIndexesBool=classification['index']==tractIterator
+    currentIndexesBool=[iIndex==tractIterator+1 for iIndex in classification['index']]
     #make an output directory for this tract
     currFigOutDir=os.path.join(outDir,'images',currentName)
     if not os.path.exists(currFigOutDir):
@@ -108,7 +100,7 @@ for tractIterator,iTractName in enumerate(classification['names']):
     #create the requested visualizations
     wmaPyTools.visTools.multiPlotsForTract(streamlines[currentIndexesBool],atlas=inputAtlas,atlasLookupTable=lookupTable,refAnatT1=refAnatT1,outdir=currFigOutDir,tractName=currentName,makeGifs=config['gifFlag'],makeTiles=config['tileFlag'],makeFingerprints=config['fingerprintFlag'],makeSpagetti=config['spagettiFlag'])
     #generate a json info dict for the requested images
-    currentTractDict=wmaPyTools.visTools.jsonFor_multiPlotsForTract(tractName=currentName,makeGifs=config['gifFlag'],makeTiles=config['tileFlag'],makeFingerprints=config['fingerprintFlag'],makeSpagetti=config['spagettiFlag'])
+    currentTractDict=wmaPyTools.visTools.jsonFor_multiPlotsForTract(saveDir=currFigOutDir,tractName=currentName,makeGifs=config['gifFlag'],makeTiles=config['tileFlag'],makeFingerprints=config['fingerprintFlag'],makeSpagetti=config['spagettiFlag'])
     #append it to the dictionary
     outJsonDict['images']=outJsonDict['images']+currentTractDict['images']
     
