@@ -104,7 +104,7 @@ for tractIterator,iTractName in enumerate(classification['names']):
     #append it to the dictionary
     outJsonDict['images']=outJsonDict['images']+currentTractDict['images']
     
-with open("images.json", "w") as outfile:
+with open(os.path.join(outDir,"images.json"), "w") as outfile:
     #dump or dumps?  I have no idea
     json.dump(dictionary, outfile)
 
