@@ -106,6 +106,6 @@ for tractIterator,iTractName in enumerate(classification['names']):
     
 with open(os.path.join(outDir,"images.json"), "w") as outfile:
     #dump or dumps?  I have no idea
-    json.dump(dictionary, outfile)
+    json.dump(outJsonDict, outfile)
 
 print ('figure generation complete')
