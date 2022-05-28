@@ -53,7 +53,7 @@ if not np.logical_or(fsPath=='',fsPath==None):
     except:
         #can nibael handle mgz?
         inputAtlas=nib.load(os.path.join(fsPath,'mri/'+atlasName+'.mgz'))
-    inputAtlas=wmaPyTools.roiTools.inflateAtlasIntoWMandBG(inputAtlas, 2)
+    inputAtlas=wmaPyTools.roiTools.inflateAtlasIntoWMandBG(inputAtlas, 2,inferWM=True)
 else:
     #set inputAtlas to none
     inputAtlas=None
