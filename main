@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -l nodes=1:ppn=16
 #PBS -l walltime=02:00:00
-#PBS -l vmem=25gb
+#PBS -l vmem=64gb
 
 # run the actual python code
 singularity exec docker://brainlife/dipy:latest python3 main.py
