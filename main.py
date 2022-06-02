@@ -31,6 +31,14 @@ import numpy as np
 import nibabel as nib
 import pandas as pd
 
+import wmaPyTools.genUtils
+if wmaPyTools.genUtils.is_docker():
+    import matplotlib 
+    #trying workaround described here:
+    #https://github.com/matplotlib/matplotlib/issues/18022
+    #import matplotlib.backends
+    matplotlib.use('Agg')
+
 
 # load inputs from config.json
 with open('config.json') as config_json:
