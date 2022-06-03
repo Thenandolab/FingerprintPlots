@@ -101,16 +101,18 @@ for tractIterator,iTractName in enumerate(classification['names']):
     currentName=iTractName
     #get the bool vec of the streamline indexes
     currentIndexesBool=[iIndex==tractIterator+1 for iIndex in classification['index']]
-    #make an output directory for this tract
-    currFigOutDir=os.path.join(outDir,'images',currentName)
-    if not os.path.exists(currFigOutDir):
-        os.makedirs(currFigOutDir)
-    #create the requested visualizations
-    wmaPyTools.visTools.multiPlotsForTract(streamlines[currentIndexesBool],atlas=inputAtlas,atlasLookupTable=lookupTable,refAnatT1=refAnatT1,outdir=currFigOutDir,tractName=currentName,makeGifs=config['gifFlag'],makeTiles=config['tileFlag'],makeFingerprints=config['fingerprintFlag'],makeSpagetti=config['spagettiFlag'])
-    #generate a json info dict for the requested images
-    currentTractDict=wmaPyTools.visTools.jsonFor_multiPlotsForTract(saveDir=currFigOutDir,tractName=currentName,makeGifs=config['gifFlag'],makeTiles=config['tileFlag'],makeFingerprints=config['fingerprintFlag'],makeSpagetti=config['spagettiFlag'])
-    #append it to the dictionary
-    outJsonDict['images']=outJsonDict['images']+currentTractDict['images']
+    #check to make sure something is there
+    if not np.sum(currentIndexesBool)==0:
+        #make an output directory for this tract
+        currFigOutDir=os.path.join(outDir,'images',currentName)
+        if not os.path.exists(currFigOutDir):
+            os.makedirs(currFigOutDir)
+        #create the requested visualizations
+        wmaPyTools.visTools.multiPlotsForTract(streamlines[currentIndexesBool],atlas=inputAtlas,atlasLookupTable=lookupTable,refAnatT1=refAnatT1,outdir=currFigOutDir,tractName=currentName,makeGifs=config['gifFlag'],makeTiles=config['tileFlag'],makeFingerprints=config['fingerprintFlag'],makeSpagetti=config['spagettiFlag'])
+        #generate a json info dict for the requested images
+        currentTractDict=wmaPyTools.visTools.jsonFor_multiPlotsForTract(saveDir=currFigOutDir,tractName=currentName,makeGifs=config['gifFlag'],makeTiles=config['tileFlag'],makeFingerprints=config['fingerprintFlag'],makeSpagetti=config['spagettiFlag'])
+        #append it to the dictionary
+        outJsonDict['images']=outJsonDict['images']+currentTractDict['images']
     
 with open(os.path.join(outDir,"images.json"), "w") as outfile:
     #dump or dumps?  I have no idea
