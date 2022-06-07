@@ -43,6 +43,8 @@ if wmaPyTools.genUtils.is_docker():
 # load inputs from config.json
 with open('config.json') as config_json:
 	config = json.load(config_json)
+    
+inflateParam=config['inflateParam']
 
 outDir='output'
 if not os.path.exists(outDir):
@@ -51,25 +53,35 @@ if not os.path.exists(os.path.join(outDir,'images')):
     os.makedirs(os.path.join(outDir,'images'))
 #set to freesurfer output path for this subject
 fsPath=config['freesurfer']
+#get the parc input, if its there
+parcIn=config['parc']
+
 #you may need to convert the .mgz files to .nii.gz using the mr_convert command
 #also, you may need to rename the subsequent aparcDk atlas file to it's standard name:
-atlasName='aparc.a2009s+aseg'
-#if a fsPath has been entered, load it
-if not np.logical_or(fsPath=='',fsPath==None):
+
+#read in the input parc, from the relevant source, if available
+if not np.logical_or(parcIn=='',parcIn==None):    
+    inputAtlas=nib.load(parcIn)
+    #do a bit of preprocessing
+    inputAtlas=wmaPyTools.roiTools.preProcParc(inputAtlas,deIslandBool=True,inflateIter=inflateParam,retainOrigBorders=False,maintainIslandsLabels=None,erodeLabels=None)    
+    
+    lookupTable=wmaPyTools.genUtils.parcJSON_to_LUT(config['label'])
+    
+elif  not np.logical_or(fsPath=='',fsPath==None):
+    atlasName='aparc.a2009s+aseg'
     try:
         inputAtlas=nib.load(os.path.join(fsPath,'mri/'+atlasName+'.nii.gz'))
     except:
         #can nibael handle mgz?
         inputAtlas=nib.load(os.path.join(fsPath,'mri/'+atlasName+'.mgz'))
-    inputAtlas=wmaPyTools.roiTools.inflateAtlasIntoWMandBG(inputAtlas, 2,inferWM=True)
+    #in either case get the lookup table
+    lookupTable=pd.read_csv('FreesurferLookup.csv')
+    #and do preprocessing
+    inputAtlas=wmaPyTools.roiTools.preProcParc(inputAtlas,deIslandBool=True,inflateIter=inflateParam,retainOrigBorders=False,maintainIslandsLabels=None,erodeLabels=[2,41])    
+    
 else:
-    #set inputAtlas to none
     inputAtlas=None
-#also load the lookup table for freesurfer
-#conveniently stolen from WiMSE: https://github.com/DanNBullock/WiMSE
-lookupTable=pd.read_csv('FreesurferLookup.csv')
-#do the same for the reference T1
-
+    
 refAnatT1=config['anat']
 if not np.logical_or(refAnatT1=='',refAnatT1==None):
     refAnatT1=nib.load(refAnatT1)
