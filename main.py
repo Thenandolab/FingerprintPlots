@@ -52,9 +52,17 @@ if not os.path.exists(outDir):
 if not os.path.exists(os.path.join(outDir,'images')):
     os.makedirs(os.path.join(outDir,'images'))
 #set to freesurfer output path for this subject
-fsPath=config['freesurfer']
+if 'freesurfer' in config.keys():
+    fsPath=config['freesurfer']
+else:
+    fsPath=''
+
 #get the parc input, if its there
-parcIn=config['parc']
+
+if 'parc' in config.keys():
+    parcIn=config['parc']
+else:
+    parcIn=''
 
 #you may need to convert the .mgz files to .nii.gz using the mr_convert command
 #also, you may need to rename the subsequent aparcDk atlas file to it's standard name:
@@ -63,7 +71,7 @@ parcIn=config['parc']
 if not np.logical_or(parcIn=='',parcIn==None):    
     inputAtlas=nib.load(parcIn)
     #do a bit of preprocessing
-    inputAtlas=wmaPyTools.roiTools.preProcParc(inputAtlas,deIslandBool=True,inflateIter=inflateParam,retainOrigBorders=False,maintainIslandsLabels=None,erodeLabels=None)    
+    inputAtlas,deIslandReport,inflationReport=wmaPyTools.roiTools.preProcParc(inputAtlas,deIslandBool=True,inflateIter=inflateParam,retainOrigBorders=False,maintainIslandsLabels=None,erodeLabels=None)    
     
     lookupTable=wmaPyTools.genUtils.parcJSON_to_LUT(config['label'])
     
@@ -77,7 +85,7 @@ elif  not np.logical_or(fsPath=='',fsPath==None):
     #in either case get the lookup table
     lookupTable=pd.read_csv('FreesurferLookup.csv')
     #and do preprocessing
-    inputAtlas=wmaPyTools.roiTools.preProcParc(inputAtlas,deIslandBool=True,inflateIter=inflateParam,retainOrigBorders=False,maintainIslandsLabels=None,erodeLabels=[2,41])    
+    inputAtlas,deIslandReport,inflationReport=wmaPyTools.roiTools.preProcParc(inputAtlas,deIslandBool=True,inflateIter=inflateParam,retainOrigBorders=False,maintainIslandsLabels=None,erodeLabels=[2,41])    
     
 else:
     inputAtlas=None
