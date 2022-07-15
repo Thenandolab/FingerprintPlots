@@ -22,6 +22,8 @@ import wmaPyTools.analysisTools
 import wmaPyTools.segmentationTools
 import wmaPyTools.streamlineTools
 import wmaPyTools.visTools
+from dipy.tracking.streamlinespeed import length,set_number_of_points
+import warnings
 
 #os.chdir(startDir)
 
@@ -63,6 +65,9 @@ if 'parc' in config.keys():
     parcIn=config['parc']
 else:
     parcIn=''
+
+#HIDDEN PARAMETER!
+targetInternodeDistance=.5
 
 #you may need to convert the .mgz files to .nii.gz using the mr_convert command
 #also, you may need to rename the subsequent aparcDk atlas file to it's standard name:
@@ -127,8 +132,21 @@ for tractIterator,iTractName in enumerate(classification['names']):
         currFigOutDir=os.path.join(outDir,'images',currentName)
         if not os.path.exists(currFigOutDir):
             os.makedirs(currFigOutDir)
-        #create the requested visualizations
-        wmaPyTools.visTools.multiPlotsForTract(streamlines[currentIndexesBool],atlas=inputAtlas,atlasLookupTable=lookupTable,refAnatT1=refAnatT1,outdir=currFigOutDir,tractName=currentName,makeGifs=config['gifFlag'],makeTiles=config['tileFlag'],makeFingerprints=config['fingerprintFlag'],makeSpagetti=config['spagettiFlag'])
+            
+        #lets take this moment to determine if there's substantial spacing
+        #between nodes and resample accordingly
+        avgNodeDistance=np.mean(np.sqrt(np.sum(np.square(np.diff(streamlines[currentIndexesBool][0],axis=0)),axis=1)))
+        if avgNodeDistance > 1:
+            warnings.warn('Internode distance larger than 1 for ' + currentName + ' \ resampling to obtain ~' +str(targetInternodeDistance))
+            #compute lengths to determine this
+            avgStreamLength=np.mean(length(streamlines[currentIndexesBool]))
+            targetNodeNum=np.divide(avgStreamLength,targetInternodeDistance).astype(int)
+            #create the requested visualizations
+            wmaPyTools.visTools.multiPlotsForTract(set_number_of_points(streamlines[currentIndexesBool],targetNodeNum),atlas=inputAtlas,atlasLookupTable=lookupTable,refAnatT1=refAnatT1,outdir=currFigOutDir,tractName=currentName,makeGifs=config['gifFlag'],makeTiles=config['tileFlag'],makeFingerprints=config['fingerprintFlag'],makeSpagetti=config['spagettiFlag'])
+        else:
+            #just go ahead and make the visualizations
+            wmaPyTools.visTools.multiPlotsForTract(streamlines[currentIndexesBool],atlas=inputAtlas,atlasLookupTable=lookupTable,refAnatT1=refAnatT1,outdir=currFigOutDir,tractName=currentName,makeGifs=config['gifFlag'],makeTiles=config['tileFlag'],makeFingerprints=config['fingerprintFlag'],makeSpagetti=config['spagettiFlag'])
+
         #generate a json info dict for the requested images
         currentTractDict=wmaPyTools.visTools.jsonFor_multiPlotsForTract(saveDir=currFigOutDir,tractName=currentName,makeGifs=config['gifFlag'],makeTiles=config['tileFlag'],makeFingerprints=config['fingerprintFlag'],makeSpagetti=config['spagettiFlag'])
         #append it to the dictionary
