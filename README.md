@@ -70,13 +70,20 @@ Variables and parameters can then be read in from the dictionary using the relev
 
 ```
 {
-    "inputFile_1": "local/path/to/inputFile_1",
-    "inputFile_2": "local/path/to/inputFile_2",
-    "inputFile_3": "local/path/to/inputFile_3",
-    "parameter_1": parameter_1_value,
-    "parameter_2": parameter_2_value,
-    "parameter_3": parameter_3_value
+    "fingerprintFlag": true,
+    "spagettiFlag": false,
+    "gifFlag": false,
+    "tileFlag": false,
+    "freesurfer": "/output",
+    "tractogram": "track.tck",
+    "track": "track.tck",
+    "wmc": "classification.mat",
+    "classification": "classification.mat",
+    "anat": "t1.nii.gz",
+    "parc": "parc.nii.gz",
+    "label": "label.json"
 }
+
 ```
 Consider reviewing the [json standard overview](https://www.json.org/json-en.html) for help formatting this object.
 
